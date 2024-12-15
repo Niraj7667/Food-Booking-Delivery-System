@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String             @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  email         String             @unique
+  password      String
+  salt          String
+  phone         String
+  address       String[]           // Multiple addresses for delivery
+  orders        Order[]            // Orders placed by the user
+  tableReservations TableReservation[] // Table reservations made by the user
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model Restaurant {
+  id             String             @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  email          String             @unique
+  password       String
+  salt           String
+  location       String
+  menuItems      MenuItem[]         // Menu items offered by the restaurant
+  orders         Order[]            // Orders placed for the restaurant
+  tables         Table[]            // Tables available in the restaurant
+  qrCode         String             @unique // Unique URL for menu access and ordering
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  openingHours   Json               // Flexible hours stored as JSON
+  rating         Float              @default(0)
+  isVerified     Boolean            @default(false)
+  maxTables      Int
+  paymentMethods String[]           // Supported payment options
+  tableReservations TableReservation[] // Table reservations made at this restaurant
+}
+
+model MenuItem {
+  id             String             @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  price          Float
+  description    String
+  image          String
+  restaurantId   String             @db.ObjectId
+  restaurant     Restaurant         @relation(fields: [restaurantId], references: [id])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  category       String             // e.g., "Appetizer", "Main Course"
+  dietType       String?            // "Vegetarian", "Non-Vegetarian"
+  preparationTime Int?              // Time in minutes
+  isAvailable    Boolean            @default(true)
+  orderItems     OrderMenuItem[]    // Explicit join with Order through OrderMenuItem
+
+}
+
+model Table {
+  id             String             @id @default(auto()) @map("_id") @db.ObjectId
+  restaurantId   String             @db.ObjectId
+  restaurant     Restaurant         @relation(fields: [restaurantId], references: [id])
+  tableNumber    Int                @unique
+  qrCode         String             @unique // Unique URL/text representation for scanning
+  orders         Order[]            @relation("TableOrders")
+  tableReservations TableReservation[] // Table reservations for this table
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model TableReservation {
+  id                String      @id @default(auto()) @map("_id") @db.ObjectId
+  restaurantId      String      @db.ObjectId
+  restaurant        Restaurant  @relation(fields: [restaurantId], references: [id])
+  userId            String      @db.ObjectId
+  user              User        @relation(fields: [userId], references: [id])
+  tableId           String      @db.ObjectId
+  table             Table       @relation(fields: [tableId], references: [id])
+  reservationTime   DateTime    // The date and time of the reservation
+  numOfPeople       Int         // Number of people for the reservation
+  status            String      // Enum: "PENDING", "CONFIRMED", "CANCELLED"
+  order             Order[]     // Related orders for this reservation (optional)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Order {
+  id              String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String             @db.ObjectId
+  restaurantId    String             @db.ObjectId
+  tableId         String?            @db.ObjectId // Optional for dine-in or table orders
+  tableReservationId String?         @db.ObjectId // Foreign key for linking to TableReservation
+  user            User               @relation(fields: [userId], references: [id])
+  restaurant      Restaurant         @relation(fields: [restaurantId], references: [id])
+  table           Table?             @relation(fields: [tableId], references: [id], name: "TableOrders")
+  tableReservation TableReservation? @relation(fields: [tableReservationId], references: [id])
+
+  orderType       String             // Enum: "HOME_DELIVERY", "DINE_IN_ADVANCE", "TABLE_ORDER", "QR_ORDER"
+  deliveryAddress String?            // Required for HOME_DELIVERY
+  mealTime        DateTime?          // Reservation time for DINE_IN_ADVANCE
+  tableNumber     Int?               // Reserved table number if pre-ordering
+  status          String             // Enum: "PENDING", "PREPARING", "READY", "COMPLETED", "CANCELLED"
+  paymentMethod   String             // Enum: "ONLINE_PAYMENT", "CASH_ON_DELIVERY", "PAY_AT_RESTAURANT"
+  totalAmount     Float
+  items           Json               // JSON for flexible order items
+  menuItems       OrderMenuItem[]    // Explicit join with MenuItems through OrderMenuItem
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model OrderMenuItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId   String   @db.ObjectId
+  menuItemId String  @db.ObjectId
+  order     Order    @relation(fields: [orderId], references: [id])
+  menuItem  MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity  Int      // Quantity of the item ordered
+}
