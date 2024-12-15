@@ -18,12 +18,15 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
+    "jimp": "^1.6.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "prisma": "^6.0.1",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "qrcode-reader": "^1.0.4"
   },
   "devDependencies": {
+    "@types/jimp": "^0.2.1",
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2"
   }

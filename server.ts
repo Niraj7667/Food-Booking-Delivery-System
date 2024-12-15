@@ -1,11 +1,13 @@
-import express, { Request, Response } from "express";
+import express, {  Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
-import prisma from "prisma/prismaClient";
 
 import authRoute from "./src/routers/authRoute";
+import updateroute from "./src/routers/updateRoutes"
+import menuRoute from "./src/routers/menuRoute";
+import qrcodeRoute from "./src/routers/qrcodeRoute"
 
 
 
@@ -24,9 +26,12 @@ app
 
 
 app.use('/auth',authRoute)
+app.use('/update',updateroute);
+app.use('/menu',menuRoute);
+app.use('/qrcode',qrcodeRoute);
 
 
-  app.get("/", (req: Request, res: Response) => {
+  app.get("/", ( res: Response) => {
     res.send("Hello, TypeScript!");
   });
 
