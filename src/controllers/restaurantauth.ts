@@ -11,7 +11,7 @@ const generateUniqueUrl = (restaurantId: string): string => {
 
 // Restaurant Signup
 export const restaurantSignup = async (req: Request, res: Response): Promise<void> => {
-  const { name, email, password, location, maxTables, paymentMethods, openingHours } = req.body;
+  const { name, email, password,phone, location, maxTables,  openingHours } = req.body;
 
   try {
     // Check if the restaurant already exists
@@ -31,24 +31,23 @@ export const restaurantSignup = async (req: Request, res: Response): Promise<voi
         name,
         email,
         password: hashedPassword,
+        phone,
         salt,
         location,
-        qrCode : qrcode, 
-        maxTables,
-        paymentMethods,
+        maxTables: parseInt(maxTables),
         openingHours,
       },
     });
 
     // Generate QR code from URL
-    const uniqueUrl = generateUniqueUrl(newRestaurant.id);
-    const qrCodeDataUrl = await QRCode.toDataURL(uniqueUrl);
+    // const uniqueUrl = generateUniqueUrl(newRestaurant.id);
+    // const qrCodeDataUrl = await QRCode.toDataURL(uniqueUrl);
 
-    // Update restaurant with QR code
-    await prisma.restaurant.update({
-      where: { id: newRestaurant.id },
-      data: { qrCode: qrCodeDataUrl },
-    });
+    // // Update restaurant with QR code
+    // await prisma.restaurant.update({
+    //   where: { id: newRestaurant.id },
+    //   data: { qrCode: qrCodeDataUrl },
+    // });
 
     // Generate JWT token
     const token = jwt.sign(
@@ -113,4 +112,35 @@ export const restaurantLogout = (req: Request, res: Response): void=> {
   res.clearCookie("restauranttoken");
   res.json({ message: "Logout successful" });
   return;
+};
+
+
+// Function to get all restaurants
+export const getAllRestaurants = async ( req: Request,res: Response): Promise<void> => {
+  try {
+    // Fetch all restaurants from the database
+    const restaurants = await prisma.restaurant.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        location: true,
+        rating: true,
+        createdAt: true,
+      },
+    });
+
+    // If restaurants exist, send them as response
+    if (restaurants.length > 0) {
+      res.json(restaurants);
+      return;
+    } else {
+      res.status(404).json({ message: 'No restaurants found' });
+      return;
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+    return;
+  }
 };

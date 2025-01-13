@@ -25,20 +25,20 @@ model Restaurant {
   id             String             @id @default(auto()) @map("_id") @db.ObjectId
   name           String
   email          String             @unique
+  phone          String?
   password       String
   salt           String
   location       String
   menuItems      MenuItem[]         // Menu items offered by the restaurant
   orders         Order[]            // Orders placed for the restaurant
   tables         Table[]            // Tables available in the restaurant
-  qrCode         String             @unique // Unique URL for menu access and ordering
+  // qrCode         String             @unique // Unique URL for menu access and ordering
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
-  openingHours   Json               // Flexible hours stored as JSON
+  openingHours   Json?             // Flexible hours stored as JSON
   rating         Float              @default(0)
   isVerified     Boolean            @default(false)
   maxTables      Int
-  paymentMethods String[]           // Supported payment options
   tableReservations TableReservation[] // Table reservations made at this restaurant
 }
 
@@ -89,28 +89,33 @@ model TableReservation {
 }
 
 model Order {
-  id              String             @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String             @db.ObjectId
-  restaurantId    String             @db.ObjectId
-  tableId         String?            @db.ObjectId // Optional for dine-in or table orders
-  tableReservationId String?         @db.ObjectId // Foreign key for linking to TableReservation
-  user            User               @relation(fields: [userId], references: [id])
-  restaurant      Restaurant         @relation(fields: [restaurantId], references: [id])
-  table           Table?             @relation(fields: [tableId], references: [id], name: "TableOrders")
-  tableReservation TableReservation? @relation(fields: [tableReservationId], references: [id])
+  id                  String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String             @db.ObjectId
+  restaurantId        String             @db.ObjectId
+  tableId             String?            @db.ObjectId
+  tableReservationId  String?            @db.ObjectId
 
-  orderType       String             // Enum: "HOME_DELIVERY", "DINE_IN_ADVANCE", "TABLE_ORDER", "QR_ORDER"
-  deliveryAddress String?            // Required for HOME_DELIVERY
-  mealTime        DateTime?          // Reservation time for DINE_IN_ADVANCE
-  tableNumber     Int?               // Reserved table number if pre-ordering
-  status          String             // Enum: "PENDING", "PREPARING", "READY", "COMPLETED", "CANCELLED"
-  paymentMethod   String             // Enum: "ONLINE_PAYMENT", "CASH_ON_DELIVERY", "PAY_AT_RESTAURANT"
-  totalAmount     Float
-  items           Json               // JSON for flexible order items
-  menuItems       OrderMenuItem[]    // Explicit join with MenuItems through OrderMenuItem
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  user                User               @relation(fields: [userId], references: [id])
+  restaurant          Restaurant         @relation(fields: [restaurantId], references: [id])
+  table               Table?             @relation(fields: [tableId], references: [id], name: "TableOrders")
+  tableReservation    TableReservation?  @relation(fields: [tableReservationId], references: [id])
+
+  orderType           String             // Enum: "HOME_DELIVERY", "DINE_IN_ADVANCE", "TABLE_ORDER", "QR_ORDER"
+  deliveryAddress     String?            // Required for HOME_DELIVERY
+  mealTime            DateTime?          // Reservation time for DINE_IN_ADVANCE
+  tableNumber         Int?               // Reserved table number if pre-ordering
+  status              String             // Enum: "PENDING", "PREPARING", "READY", "COMPLETED", "CANCELLED"
+  isActive            Boolean            @default(true)     // Indicates active status
+  paymentMethod       String             // Enum: "ONLINE_PAYMENT", "CASH_ON_DELIVERY", "PAY_AT_RESTAURANT"
+  isPaid              Boolean            @default(false)    // New field for payment status
+  totalAmount         Float
+  items               Json               // JSON for flexible order items
+  menuItems           OrderMenuItem[]    // Explicit join with MenuItems through OrderMenuItem
+
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 }
+
 
 model OrderMenuItem {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId

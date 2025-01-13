@@ -3,7 +3,7 @@ import prisma from '../../prisma/prismaClient';
 
 // Restaurant Profile Update
 export const updateRestaurantProfile = async (req: Request, res: Response): Promise<void> => {
-  const { name, location, paymentMethods, maxTables, openingHours } = req.body;
+  const { name, location,email, paymentMethods, maxTables, openingHours } = req.body;
   const restaurantId = req.restaurant?.id; // Assuming restaurant is authenticated and restaurant data is available in req.restaurant
 
   if (!restaurantId) {
@@ -19,6 +19,7 @@ export const updateRestaurantProfile = async (req: Request, res: Response): Prom
         name: name || undefined,
         location: location || undefined,
         paymentMethods: paymentMethods || undefined,
+        email: email || undefined,
         maxTables: maxTables || undefined,
         openingHours: openingHours || undefined,
       },

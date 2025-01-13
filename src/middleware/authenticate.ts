@@ -40,7 +40,7 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
     }
 
     // If restaurantToken is provided, authenticate the restaurant
-    else if (restaurantToken) {
+     if (restaurantToken) {
       decoded = jwt.verify(restaurantToken, process.env.JWT_SECRET_KEY as string);
       if (!decoded.restaurantId) {
          res.status(403).json({ message: 'Invalid token. Missing restaurantId in token' });

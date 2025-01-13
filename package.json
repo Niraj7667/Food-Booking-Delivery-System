@@ -12,6 +12,7 @@
   "dependencies": {
     "@prisma/client": "^6.0.1",
     "@types/cookie-parser": "^1.4.8",
+    "body-parser": "^1.20.3",
     "cookie-parser": "^1.4.7",
     "cookieparser": "^0.1.0",
     "cors": "^2.8.5",
@@ -21,9 +22,13 @@
     "jimp": "^1.6.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "nodemailer": "^6.9.16",
     "prisma": "^6.0.1",
     "qrcode": "^1.5.4",
-    "qrcode-reader": "^1.0.4"
+    "qrcode-reader": "^1.0.4",
+    "razorpay": "^2.9.5",
+    "stripe": "^17.4.0",
+    "twilio": "^5.4.0"
   },
   "devDependencies": {
     "@types/jimp": "^0.2.1",

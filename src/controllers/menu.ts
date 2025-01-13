@@ -14,6 +14,20 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
   }
 
   try {
+    // Check if the menu item already exists
+    const existingMenuItem = await prisma.menuItem.findFirst({
+      where: {
+        name,
+        restaurantId,
+      },
+    });
+
+    if (existingMenuItem) {
+      res.status(409).json({ message: 'Menu item already exists' });
+      return;
+    }
+
+    // Create the menu item
     const menuItem = await prisma.menuItem.create({
       data: {
         name,
@@ -33,6 +47,7 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
 
 // Update Menu Item
 export const updateMenuItem = async (req: Request, res: Response): Promise<void> => {
