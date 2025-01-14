@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import prisma from 'prisma/prismaClient'; // Adjusted import path
 
+
+
+
 // Get all menu items for a specific restaurant
 export const getRestaurantMenuItems = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -73,3 +76,4 @@ export const handleMenuItemErrors = (err: Error, req: Request, res: Response, ne
         message: err.message 
     });
 };
+
