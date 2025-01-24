@@ -36,6 +36,8 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
     });
 
     if (existingMenuItem) {
+      // Delete local file if menu item already exists
+      fs.unlinkSync(req.file.path);
       res.status(409).json({ message: 'Menu item already exists' });
       return;
     }
@@ -44,6 +46,9 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
     const uploadedImage = await cloudinary.v2.uploader.upload(req.file.path, {
       folder: 'menu_items',
     });
+
+    // Delete local file after Cloudinary upload
+    fs.unlinkSync(req.file.path);
 
     if (!uploadedImage.secure_url) {
       throw new Error('Image upload failed');
@@ -55,7 +60,7 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
         name,
         description,
         price: parseFloat(price),
-        image: uploadedImage.secure_url, // Store the URL returned by Cloudinary
+        image: uploadedImage.secure_url,
         category,
         dietType,
         preparationTime: preparationTime ? parseInt(preparationTime) : undefined,
@@ -65,6 +70,14 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
 
     res.status(201).json({ message: 'Menu item created successfully', menuItem });
   } catch (error) {
+    // Attempt to delete local file if an error occurs
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error('Error deleting local file:', unlinkError);
+      }
+    }
     console.error('Error creating menu item:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
@@ -88,6 +101,10 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
     });
 
     if (!existingMenuItem) {
+      // Delete local file if menu item not found
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
       res.status(404).json({ message: 'Menu item not found' });
       return;
     }
@@ -99,6 +116,9 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
       const uploadedImage = await cloudinary.v2.uploader.upload(req.file.path, {
         folder: 'menu_items',
       });
+
+      // Delete local file after Cloudinary upload
+      fs.unlinkSync(req.file.path);
 
       if (uploadedImage.secure_url) {
         imageUrl = uploadedImage.secure_url;
@@ -114,7 +134,7 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
         name: name || undefined,
         description: description || undefined,
         price: price ? parseFloat(price) : undefined,
-        image: imageUrl, // Use the Cloudinary URL here
+        image: imageUrl,
         category: category || undefined,
         dietType: dietType || undefined,
         preparationTime: preparationTime ? parseInt(preparationTime) : undefined,
@@ -124,12 +144,20 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
 
     res.json({ message: 'Menu item updated successfully', updatedMenuItem });
   } catch (error) {
+    // Attempt to delete local file if an error occurs
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error('Error deleting local file:', unlinkError);
+      }
+    }
     console.error('Error updating menu item:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
-// Delete Menu Item
+// Delete Menu Item (unchanged)
 export const deleteMenuItem = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const restaurantId = req.restaurant?.id;
@@ -147,4 +175,3 @@ export const deleteMenuItem = async (req: Request, res: Response): Promise<void>
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-

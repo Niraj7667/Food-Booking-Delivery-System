@@ -15,13 +15,15 @@ const storage: StorageEngine = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
-    cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`);
+    const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
+    // Attach full file path to request for later deletion
+    (req as any).filePath = path.join(uploadsDir, filename);
+    cb(null, filename);
   },
 });
 
 // File filter implementation
 const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback): void => {
-  console.log('File received:', file.fieldname, file.originalname); // Debugging log
   if (file.fieldname === 'image' && file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
@@ -37,3 +39,10 @@ export const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB file size limit
   },
 });
+
+// Utility function to delete local file
+export const deleteLocalFile = (filePath: string) => {
+  if (filePath && fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+};
