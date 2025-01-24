@@ -1,15 +1,28 @@
-// Import necessary modules
 import { Request, Response } from 'express';
 import prisma from '../../prisma/prismaClient';
+import cloudinary from 'cloudinary';
+import fs from 'fs';
+import path from 'path';
 
+// Configure Cloudinary
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Create Menu Item
 export const createMenuItem = async (req: Request, res: Response): Promise<void> => {
-  const { name, description, price, image, category, dietType, preparationTime } = req.body;
+  const { name, description, price, category, dietType, preparationTime } = req.body;
   const restaurantId = req.restaurant?.id;
 
   if (!restaurantId) {
     res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  if (!req.file) {
+    res.status(400).json({ message: 'Image is required' });
     return;
   }
 
@@ -27,13 +40,22 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Create the menu item
+    // Upload the image to Cloudinary
+    const uploadedImage = await cloudinary.v2.uploader.upload(req.file.path, {
+      folder: 'menu_items',
+    });
+
+    if (!uploadedImage.secure_url) {
+      throw new Error('Image upload failed');
+    }
+
+    // Create the menu item with the Cloudinary image URL
     const menuItem = await prisma.menuItem.create({
       data: {
         name,
         description,
         price: parseFloat(price),
-        image,
+        image: uploadedImage.secure_url, // Store the URL returned by Cloudinary
         category,
         dietType,
         preparationTime: preparationTime ? parseInt(preparationTime) : undefined,
@@ -48,11 +70,10 @@ export const createMenuItem = async (req: Request, res: Response): Promise<void>
   }
 };
 
-
 // Update Menu Item
 export const updateMenuItem = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { name, description, price, image, category, dietType, preparationTime, isAvailable } = req.body;
+  const { name, description, price, category, dietType, preparationTime, isAvailable } = req.body;
   const restaurantId = req.restaurant?.id;
 
   if (!restaurantId) {
@@ -61,13 +82,39 @@ export const updateMenuItem = async (req: Request, res: Response): Promise<void>
   }
 
   try {
+    // Get the existing menu item
+    const existingMenuItem = await prisma.menuItem.findUnique({
+      where: { id },
+    });
+
+    if (!existingMenuItem) {
+      res.status(404).json({ message: 'Menu item not found' });
+      return;
+    }
+
+    let imageUrl = existingMenuItem.image;
+
+    if (req.file) {
+      // Upload the new image to Cloudinary
+      const uploadedImage = await cloudinary.v2.uploader.upload(req.file.path, {
+        folder: 'menu_items',
+      });
+
+      if (uploadedImage.secure_url) {
+        imageUrl = uploadedImage.secure_url;
+      } else {
+        throw new Error('Image upload failed');
+      }
+    }
+
+    // Update the menu item
     const updatedMenuItem = await prisma.menuItem.update({
       where: { id },
       data: {
         name: name || undefined,
         description: description || undefined,
         price: price ? parseFloat(price) : undefined,
-        image: image || undefined,
+        image: imageUrl, // Use the Cloudinary URL here
         category: category || undefined,
         dietType: dietType || undefined,
         preparationTime: preparationTime ? parseInt(preparationTime) : undefined,
