@@ -18,7 +18,10 @@ const PORT = process.env.PORT || 3000;
 
 app
   .use(cors({
-    origin: "http://localhost:5173", // Frontend URL
+    origin: [
+      "http://localhost:5173", 
+      "https://delivery-frontend-phi.vercel.app"
+    ],
     credentials: true, // Enable cookies
   }))
   .use(helmet())
