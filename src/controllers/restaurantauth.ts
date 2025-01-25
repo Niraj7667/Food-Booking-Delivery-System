@@ -6,12 +6,6 @@ import { sendOtpEmail  } from 'utils/emailUtils';
 import { generateOtp } from 'utils/otpUtils';
 
 
-// Generate a unique URL
-const generateUniqueUrl = (restaurantId: string): string => {
-  return `${process.env.BASE_URL}/menu/${restaurantId}`;
-};
-
-
 // Send OTP for Restaurant Signup
 export const restaurantOtpSignup = async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body;
@@ -23,18 +17,30 @@ export const restaurantOtpSignup = async (req: Request, res: Response): Promise<
       res.status(409).json({ message: "Restaurant already registered. Please log in." });
       return;
     }
-    console.log(existingRestaurant);
+
     // Generate OTP and expiration time
     const otp = generateOtp(); // Custom function to generate OTP
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
-    console.log(generateOtp);
-    console.log(expiresAt)
 
-    // Save OTP to the database (upsert for idempotence)
-    await prisma.otp.upsert({
-      where: { email },
-      update: { otp, expiresAt },
-      create: { email, otp, expiresAt, type: "restaurant" },
+    // Check if OTP already exists for the email
+    const existingOtp = await prisma.otp.findUnique({
+      where: { email_type: { email, type: 'restaurant' } },
+    });
+
+    if (existingOtp) {
+      // Send an email indicating OTP already sent
+      await sendOtpEmail(email, existingOtp.otp);
+      console.log('OTP already sent to the email.');
+      res.json({ message: "OTP already sent to the email." });
+      return;
+    }
+
+    console.log(otp);
+    console.log(expiresAt);
+
+    // Save OTP to the database (create if not exists)
+    await prisma.otp.create({
+      data: { email, otp, expiresAt, type: 'restaurant' },
     });
 
     // Send OTP to the restaurant's email
@@ -45,6 +51,7 @@ export const restaurantOtpSignup = async (req: Request, res: Response): Promise<
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 
 // Verify OTP and Complete Restaurant Signup
 export const restaurantSignup = async (req: Request, res: Response): Promise<void> => {

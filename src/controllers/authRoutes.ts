@@ -70,17 +70,27 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       res.status(409).json({ message: 'Already have an account. Please log in.' });
       return;
     }
-    console.log(existingUser);
+
+    // Check if OTP already exists for the email
+    const existingOtp = await prisma.otp.findUnique({ where: { email_type: { email, type: 'user' } } });
+
+    if (existingOtp) {
+      // Send the existing OTP via email (you can modify this logic)
+      await sendOtpEmail(email, existingOtp.otp);
+      console.log('OTP already sent to the email.');
+      res.json({ message: 'OTP already sent to the email.' });
+      return;
+    }
+
     // Generate OTP
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
     console.log(otp);
     console.log(expiresAt);
-    // Save OTP to the database
-    await prisma.otp.upsert({
-      where: { email },
-      update: { otp, expiresAt },
-      create: { email, otp, expiresAt, type: 'user' },
+
+    // Create a new OTP record in the database
+    await prisma.otp.create({
+      data: { email, otp, expiresAt, type: 'user' },
     });
 
     // Send OTP email
@@ -91,6 +101,7 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
 
 // Login route
 export const login = async (req: Request, res: Response): Promise<void> => {
