@@ -23,10 +23,12 @@ export const restaurantOtpSignup = async (req: Request, res: Response): Promise<
       res.status(409).json({ message: "Restaurant already registered. Please log in." });
       return;
     }
-
+    console.log(existingRestaurant);
     // Generate OTP and expiration time
     const otp = generateOtp(); // Custom function to generate OTP
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
+    console.log(generateOtp);
+    console.log(expiresAt)
 
     // Save OTP to the database (upsert for idempotence)
     await prisma.otp.upsert({

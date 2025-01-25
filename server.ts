@@ -18,9 +18,9 @@ const PORT = process.env.PORT || 3000;
 
 app
   .use(cors({
-    origin: [
-      "http://localhost:5173", 
-      "https://delivery-frontend-phi.vercel.app"
+    origin: [,
+      "https://delivery-frontend-phi.vercel.app",
+      "http://localhost:5173" 
     ],
     credentials: true, // Enable cookies
   }))

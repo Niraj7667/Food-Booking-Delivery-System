@@ -38,7 +38,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
         phone,
       },
     });
-
+  
     // Remove OTP record after successful signup
     await prisma.otp.delete({ where: { email } });
 
@@ -70,11 +70,12 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       res.status(409).json({ message: 'Already have an account. Please log in.' });
       return;
     }
-
+    console.log(existingUser);
     // Generate OTP
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
-
+    console.log(otp);
+    console.log(expiresAt);
     // Save OTP to the database
     await prisma.otp.upsert({
       where: { email },
