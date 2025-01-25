@@ -48,6 +48,7 @@ export const restaurantOtpSignup = async (req: Request, res: Response): Promise<
 
     res.json({ message: "OTP sent successfully" });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };

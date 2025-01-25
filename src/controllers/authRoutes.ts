@@ -98,6 +98,7 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
 
     res.json({ message: 'OTP sent successfully' });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
