@@ -2,29 +2,73 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../../prisma/prismaClient';
 import { generateSalt, hashPassword } from '../../utils/cryptoUtils';
-import QRCode from 'qrcode';
+import { sendOtpEmail  } from 'utils/emailUtils';
+import { generateOtp } from 'utils/otpUtils';
+
 
 // Generate a unique URL
 const generateUniqueUrl = (restaurantId: string): string => {
   return `${process.env.BASE_URL}/menu/${restaurantId}`;
 };
 
-// Restaurant Signup
-export const restaurantSignup = async (req: Request, res: Response): Promise<void> => {
-  const { name, email, password,phone, location, maxTables,  openingHours } = req.body;
+
+// Send OTP for Restaurant Signup
+export const restaurantOtpSignup = async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.body;
 
   try {
     // Check if the restaurant already exists
     const existingRestaurant = await prisma.restaurant.findUnique({ where: { email } });
     if (existingRestaurant) {
-       res.status(409).json({ message: "Restaurant already registered. Please log in." });
-       return;
+      res.status(409).json({ message: "Restaurant already registered. Please log in." });
+      return;
+    }
+
+    // Generate OTP and expiration time
+    const otp = generateOtp(); // Custom function to generate OTP
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
+
+    // Save OTP to the database (upsert for idempotence)
+    await prisma.otp.upsert({
+      where: { email },
+      update: { otp, expiresAt },
+      create: { email, otp, expiresAt, type: "restaurant" },
+    });
+
+    // Send OTP to the restaurant's email
+    await sendOtpEmail(email, otp); // Custom function to send an email with OTP
+
+    res.json({ message: "OTP sent successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Verify OTP and Complete Restaurant Signup
+export const restaurantSignup = async (req: Request, res: Response): Promise<void> => {
+  const { name, email, password, phone, location, maxTables, openingHours, otp } = req.body;
+
+  try {
+    // Check if the restaurant already exists
+    const existingRestaurant = await prisma.restaurant.findUnique({ where: { email } });
+    if (existingRestaurant) {
+      res.status(409).json({ message: "Restaurant already registered. Please log in." });
+      return;
+    }
+
+    // Verify OTP
+    const otpRecord = await prisma.otp.findUnique({ where: { email } });
+
+    if (!otpRecord || otpRecord.otp !== otp || otpRecord.expiresAt < new Date()) {
+      res.status(400).json({ message: "Invalid or expired OTP" });
+      return;
     }
 
     // Hash password
-    const salt = generateSalt();
-    const hashedPassword = hashPassword(password, salt);
-    const qrcode = "";
+    const salt = generateSalt(); // Custom function to generate a salt
+    const hashedPassword = hashPassword(password, salt); // Custom function to hash the password
+    const qrcode = ""; // Placeholder for QR code logic (if needed)
+
     // Create a new restaurant
     const newRestaurant = await prisma.restaurant.create({
       data: {
@@ -39,35 +83,29 @@ export const restaurantSignup = async (req: Request, res: Response): Promise<voi
       },
     });
 
-    // Generate QR code from URL
-    // const uniqueUrl = generateUniqueUrl(newRestaurant.id);
-    // const qrCodeDataUrl = await QRCode.toDataURL(uniqueUrl);
-
-    // // Update restaurant with QR code
-    // await prisma.restaurant.update({
-    //   where: { id: newRestaurant.id },
-    //   data: { qrCode: qrCodeDataUrl },
-    // });
+    // Delete OTP record after successful verification
+    await prisma.otp.delete({ where: { email } });
 
     // Generate JWT token
     const token = jwt.sign(
       { restaurantId: newRestaurant.id },
       process.env.JWT_SECRET_KEY as string,
-      { expiresIn: "30d" },
+      { expiresIn: "30d" }
     );
 
+    // Set cookie with the token
     res.cookie("restauranttoken", token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
-     res.json({
+
+    res.json({
       message: "Restaurant registered successfully",
       restaurant: newRestaurant,
       token,
     });
-    return;
   } catch (error) {
     res.status(500).json({ error: "Internal Server Error" });
-    return;
   }
 };
+
 
 // Restaurant Login
 export const restaurantLogin = async (req: Request, res: Response) : Promise<void> => {

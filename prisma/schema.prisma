@@ -125,3 +125,13 @@ model OrderMenuItem {
   menuItem  MenuItem @relation(fields: [menuItemId], references: [id])
   quantity  Int      // Quantity of the item ordered
 }
+
+model Otp {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  email        String    @unique
+  otp          String
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  type         String    // 'user' or 'restaurant'
+  @@unique([email, type]) // Ensures no duplicate OTPs for the same email and type
+}

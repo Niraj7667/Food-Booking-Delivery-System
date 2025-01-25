@@ -2,16 +2,25 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from 'prisma/prismaClient';
 import { generateSalt, hashPassword } from 'utils/cryptoUtils';
+import { generateOtp } from 'utils/otpUtils';
+import { sendOtpEmail } from 'utils/emailUtils';
 
-// Sign-up route
 export const signup = async (req: Request, res: Response): Promise<void> => {
-  const { name, email, password, phone } = req.body;
+  const { name, email, password, phone, otp } = req.body;
 
   try {
     // Check if the email already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       res.status(409).json({ message: 'Already have an account. Please log in.' });
+      return;
+    }
+
+    // Verify OTP
+    const otpRecord = await prisma.otp.findUnique({ where: { email } });
+
+    if (!otpRecord || otpRecord.otp !== otp || otpRecord.expiresAt < new Date()) {
+      res.status(400).json({ message: 'Invalid or expired OTP' });
       return;
     }
 
@@ -30,6 +39,9 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
+    // Remove OTP record after successful signup
+    await prisma.otp.delete({ where: { email } });
+
     // Generate JWT token
     const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET_KEY as string, {
       expiresIn: '30d', // 30 days expiration
@@ -43,6 +55,37 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
       user: newUser,
       token,
     });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+export const sendOtp = async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.body;
+
+  try {
+    // Check if the user already exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      res.status(409).json({ message: 'Already have an account. Please log in.' });
+      return;
+    }
+
+    // Generate OTP
+    const otp = generateOtp();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
+
+    // Save OTP to the database
+    await prisma.otp.upsert({
+      where: { email },
+      update: { otp, expiresAt },
+      create: { email, otp, expiresAt, type: 'user' },
+    });
+
+    // Send OTP email
+    await sendOtpEmail(email, otp);
+
+    res.json({ message: 'OTP sent successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }

@@ -18,7 +18,6 @@ export const updateRestaurantProfile = async (req: Request, res: Response): Prom
       data: {
         name: name || undefined,
         location: location || undefined,
-        paymentMethods: paymentMethods || undefined,
         email: email || undefined,
         maxTables: maxTables || undefined,
         openingHours: openingHours || undefined,
