@@ -18,7 +18,7 @@ export const getRestaurantMenuItems = async (req: Request, res: Response): Promi
         // Validate restaurant existence
         const restaurant = await prisma.restaurant.findUnique({
             where: { id: restaurantId },
-            select: { id: true, name: true } // Only select necessary fields
+            select: { id: true, name: true ,location: true,openingHours : true} // Only select necessary fields
         });
 
         if (!restaurant) {
@@ -50,7 +50,9 @@ export const getRestaurantMenuItems = async (req: Request, res: Response): Promi
         // Return restaurant name and menu items
         res.status(200).json({ 
             restaurantName: restaurant.name, 
-            menuItems: menuItems 
+            menuItems: menuItems,
+            restaurantLocation: restaurant.location,
+            restaurantOpeningHours: restaurant.openingHours,
         });
 
     } catch (error) {
